@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: scheduler
+      MYSQL_USER: scheduler
+      MYSQL_PASSWORD: scheduler
+      TZ: UTC
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  scheduler:
+    build: .
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: scheduler
+      DB_PASSWORD: scheduler
+      DB_NAME: scheduler
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: ["./wait-for.sh", "mysql:3306", "--", "./scheduler"]
+
+volumes:
+  mysql_data:
